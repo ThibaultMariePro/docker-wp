@@ -1,0 +1,66 @@
+name: docker-wp
+
+services:
+  nginx:
+    image: nginx:stable-alpine3.17
+    restart: unless-stopped
+    ports:
+      - 8080:80
+      - 443:443
+    depends_on:
+      - wordpress
+    volumes:
+      - ./nginx-conf:/etc/nginx/conf.d
+      - ./wordpress:/var/www/html
+      - ./certs:/etc/nginx/certs
+    networks:
+      - dwp
+
+  wordpress:
+    image: wordpress:php8.3-fpm-alpine
+    restart: always
+    volumes:
+      # host:container
+      - ./wordpress:/var/www/html
+    depends_on:
+      - mariadb
+    env_file:
+      - path: ./env/wordpress.env
+    networks:
+      - dwp
+
+  mariadb:
+    image: mariadb:10.6
+    restart: always
+    ports:
+      - 3306:3306
+    volumes:
+      - ./mariadb:/var/lib/mysql
+    env_file:
+      - path: ./env/mariadb.env
+    networks:
+      - dwp
+
+# TODO: Add Adminer
+  # adminer:
+  #   image: adminer:latest
+  #   restart: always
+  #   ports:
+  #     - 8081:8081
+  #   depends_on:
+  #     - mariadb
+
+# TODO: Add Certbot
+  # certbot:
+  #   image: certbot/certbot
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ./certs:/etc/letsencrypt
+  #   entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+volumes:
+  wordpress:
+  mariadb:
+
+networks:
+  dwp:
